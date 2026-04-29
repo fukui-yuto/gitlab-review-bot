@@ -1,0 +1,16 @@
+[Unit]
+Description=GitLab MR Auto Review Bot
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/gitlab-review-bot
+ExecStart=/usr/bin/docker compose up
+ExecStop=/usr/bin/docker compose down
+Restart=always
+RestartSec=10
+User=reviewbot
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,23 @@
+services:
+  review-bot:
+    build: .
+    image: gitlab-review-bot:latest
+    container_name: gitlab-review-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./config:/app/config:ro
+    depends_on:
+      - gitlab
+    networks:
+      - review-net
+
+networks:
+  review-net:
+    driver: bridge

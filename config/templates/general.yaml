@@ -1,0 +1,35 @@
+name: general
+display_name: 総合レビュー
+description: コード品質・セキュリティ・テスト観点を横断する総合レビュー
+version: 1
+system_prompt: |
+  あなたはシニアソフトウェアエンジニアであり、コードレビュー担当です。
+  以下のMR差分について、コード品質・セキュリティ・テストの観点で
+  日本語でレビューしてください。重要度の高い指摘から順に挙げてください。
+checklist:
+  - id: quality
+    label: コード品質
+    points: [設計, 命名, 可読性, バグ可能性]
+  - id: security
+    label: セキュリティ
+    points: [入力検証, 認証認可, 機微情報, 依存脆弱性]
+  - id: test
+    label: テスト
+    points: [カバレッジ, 異常系, Docstring]
+output_format: |
+  ## 概要
+  （3-5行のサマリ）
+
+  ## 指摘事項（重要度順）
+  ### [重要度] ファイル:行 — タイトル
+  - **問題**:
+  - **提案**:
+  - **根拠**:
+
+  ## Good Points
+  - ...
+parameters:
+  temperature: 0.2
+  max_output_tokens: 4096
+  include_full_diff: true
+  truncate_diff_strategy: per_file_head_tail

@@ -1,0 +1,29 @@
+{
+  "object_kind": "note",
+  "event_type": "note",
+  "user": {
+    "id": 1,
+    "username": "testuser",
+    "name": "Test User"
+  },
+  "project": {
+    "id": 42,
+    "name": "test-project",
+    "web_url": "http://gitlab.local/test/test-project"
+  },
+  "object_attributes": {
+    "id": 100,
+    "note": "/review",
+    "noteable_type": "MergeRequest",
+    "noteable_id": 7
+  },
+  "merge_request": {
+    "id": 7,
+    "iid": 7,
+    "title": "Test MR",
+    "description": "Test description",
+    "source_branch": "feature/test",
+    "target_branch": "main",
+    "state": "opened"
+  }
+}

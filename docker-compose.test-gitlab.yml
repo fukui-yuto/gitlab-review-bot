@@ -1,0 +1,60 @@
+# Test GitLab environment for local development and E2E testing
+# Usage: docker compose -f docker-compose.test-gitlab.yml up -d
+#
+# GitLab CE will be available at http://localhost:8929
+# Initial root password: set via GITLAB_ROOT_PASSWORD
+# It takes several minutes for GitLab to fully start up.
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:17.4.0-ce.0
+    container_name: test-gitlab
+    hostname: gitlab.local
+    restart: unless-stopped
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://gitlab.local:8929'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+        # Performance tuning for local dev
+        puma['workers'] = 2
+        sidekiq['concurrency'] = 5
+        postgresql['shared_buffers'] = '128MB'
+        prometheus_monitoring['enable'] = false
+        grafana['enable'] = false
+      GITLAB_ROOT_PASSWORD: "reviewbot-test-2024"
+    ports:
+      - "8929:8929"
+      - "2224:22"
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+    shm_size: "256m"
+    networks:
+      - review-net
+
+  # Waits for GitLab to be ready, then sets up test project + webhook
+  gitlab-setup:
+    image: python:3.11-slim
+    container_name: gitlab-setup
+    depends_on:
+      - gitlab
+    environment:
+      GITLAB_URL: http://gitlab:8929
+      GITLAB_ROOT_PASSWORD: "reviewbot-test-2024"
+      WEBHOOK_URL: http://review-bot:8080/api/v1/webhook/gitlab
+      WEBHOOK_SECRET: test-webhook-secret-12345
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint: ["python", "/scripts/setup_test_gitlab.py"]
+    networks:
+      - review-net
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+
+networks:
+  review-net:
+    driver: bridge

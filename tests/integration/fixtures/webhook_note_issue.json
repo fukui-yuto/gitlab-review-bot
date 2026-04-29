@@ -1,0 +1,27 @@
+{
+  "object_kind": "note",
+  "event_type": "note",
+  "user": {
+    "id": 1,
+    "username": "testuser",
+    "name": "Test User"
+  },
+  "project": {
+    "id": 42,
+    "name": "test-project",
+    "web_url": "http://gitlab.local/test/test-project"
+  },
+  "object_attributes": {
+    "id": 200,
+    "note": "/review security",
+    "noteable_type": "Issue",
+    "noteable_id": 10
+  },
+  "issue": {
+    "id": 10,
+    "iid": 5,
+    "title": "Test Issue",
+    "description": "Please review related MRs",
+    "state": "opened"
+  }
+}
