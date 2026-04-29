@@ -29,16 +29,21 @@ class ReviewTemplate(BaseModel):
     display_name: str
     description: str
     version: int = 1
+    type: str = "mr"  # "mr" or "issue"
     system_prompt: str
     checklist: list[ChecklistItem] = Field(default_factory=list)
     output_format: str
     parameters: TemplateParameters = Field(default_factory=TemplateParameters)
+    # Issue テンプレートの自動選択用キーワード (type=issue のみ)
+    keywords: list[str] = Field(default_factory=list)
 
 
 class TemplateLoader:
     def __init__(self, templates_dir: str | Path) -> None:
         self._dir = Path(templates_dir)
         self._templates: dict[str, ReviewTemplate] = {}
+        self._mr_templates: dict[str, ReviewTemplate] = {}
+        self._issue_templates: dict[str, ReviewTemplate] = {}
         self._load_all()
 
     def _load_all(self) -> None:
@@ -58,7 +63,13 @@ class TemplateLoader:
                         stem=path.stem,
                     )
                 self._templates[template.name] = template
-                logger.info("template loaded", name=template.name)
+
+                if template.type == "issue":
+                    self._issue_templates[template.name] = template
+                else:
+                    self._mr_templates[template.name] = template
+
+                logger.info("template loaded", name=template.name, type=template.type)
             except Exception as e:
                 raise RuntimeError(f"Failed to load template {path}: {e}") from e
 
@@ -72,12 +83,54 @@ class TemplateLoader:
         return list(self._templates.values())
 
     def available_names(self) -> list[str]:
-        return list(self._templates.keys())
+        """MRテンプレートの名前一覧 (/review <name> で使用可能なもの)。"""
+        return list(self._mr_templates.keys())
+
+    def available_issue_names(self) -> list[str]:
+        return list(self._issue_templates.keys())
+
+    def match_issue_template(self, title: str, description: str, labels: list[str]) -> ReviewTemplate | None:
+        """Issue の内容からキーワードマッチで最適なIssueテンプレートを選択する。
+
+        各テンプレートの keywords を照合し、最もマッチ数が多いテンプレートを返す。
+        マッチがなければ issue_general を返す。issue_general もなければ None。
+        """
+        text = f"{title} {description} {' '.join(labels)}".lower()
+        best: ReviewTemplate | None = None
+        best_score = 0
+
+        for tmpl in self._issue_templates.values():
+            if not tmpl.keywords:
+                continue
+            score = sum(1 for kw in tmpl.keywords if kw.lower() in text)
+            if score > best_score:
+                best_score = score
+                best = tmpl
+
+        if best is not None:
+            return best
+
+        # Fallback to issue_general
+        return self._issue_templates.get("issue_general")
 
     def format_help(self) -> str:
         lines = ["**利用可能なレビューテンプレート:**", ""]
-        for t in self._templates.values():
-            lines.append(f"- `/review {t.name}` — {t.display_name}: {t.description}")
-        lines.append("")
-        lines.append("テンプレート未指定時は `general` が使用されます。")
+
+        mr_templates = [t for t in self._templates.values() if t.type == "mr"]
+        issue_templates = [t for t in self._templates.values() if t.type == "issue"]
+
+        if mr_templates:
+            lines.append("**MR レビュー** (MRコメントで使用):")
+            for t in mr_templates:
+                lines.append(f"- `/review {t.name}` — {t.display_name}: {t.description}")
+            lines.append("")
+
+        if issue_templates:
+            lines.append("**Issue レビュー** (Issueコメントで使用):")
+            lines.append("Issueの内容に応じて自動的に最適なテンプレートが選択されます。")
+            for t in issue_templates:
+                lines.append(f"- `{t.name}` — {t.display_name}: {t.description}")
+            lines.append("")
+
+        lines.append("テンプレート未指定時は `general` (MR) / 自動選択 (Issue) が使用されます。")
         return "\n".join(lines)

@@ -50,7 +50,8 @@ def main() -> bool:
     from review_bot.services.template_loader import TemplateLoader
 
     loader = TemplateLoader("config/templates")
-    check("4 templates loaded", len(loader.available_names()) == 4)
+    check("MR templates loaded", len(loader.available_names()) == 4)
+    check("Issue templates loaded", len(loader.available_issue_names()) == 3)
     check("general exists", loader.get("general") is not None)
     check("security exists", loader.get("security") is not None)
     check("code_quality exists", loader.get("code_quality") is not None)
@@ -75,17 +76,26 @@ def main() -> bool:
     check("MR prompt has title", "Test MR" in prompt)
     check("MR prompt has file", "a.py" in prompt)
 
-    # Test 6: Prompt builder (Issue)
+    # Test 6: Prompt builder (Issue) with template
     issue = IssueInfo(42, 5, "Bug Title", "Bug description", ["bug", "urgent"], "opened")
-    issue_prompt = builder.build_issue_user_prompt(issue)
+    issue_tmpl = loader.get("issue_bug")
+    issue_prompt = builder.build_issue_user_prompt(issue, template=issue_tmpl)
     check("Issue prompt has title", "Bug Title" in issue_prompt)
     check("Issue prompt has label", "bug" in issue_prompt)
     check("Issue prompt has review points", "レビュー観点" in issue_prompt)
 
     issue_prompt_with_mrs = builder.build_issue_user_prompt(
-        issue, related_mr_titles=["!10: Fix login"]
+        issue, template=issue_tmpl, related_mr_titles=["!10: Fix login"]
     )
     check("Issue prompt has related MR", "!10: Fix login" in issue_prompt_with_mrs)
+
+    # Test 7: Issue template auto-matching
+    proc_tmpl = loader.match_issue_template("デプロイ手順書", "サーバーに接続", [])
+    check("Procedure template matched", proc_tmpl is not None and proc_tmpl.name == "issue_procedure")
+    bug_tmpl = loader.match_issue_template("ログインバグ", "エラーが出る", ["bug"])
+    check("Bug template matched", bug_tmpl is not None and bug_tmpl.name == "issue_bug")
+    gen_tmpl = loader.match_issue_template("普通のタスク", "何かする", [])
+    check("General fallback matched", gen_tmpl is not None and gen_tmpl.name == "issue_general")
 
     # Summary
     total = passed + failed

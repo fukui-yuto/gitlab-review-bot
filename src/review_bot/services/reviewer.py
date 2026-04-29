@@ -136,20 +136,29 @@ class Reviewer:
             project=issue.project_id,
             issue=issue.issue_iid,
         )
-        log.info("issue review started")
+
+        # Issue の内容からテンプレートを自動選択
+        issue_template = self._templates.match_issue_template(
+            issue.title, issue.description, issue.labels
+        )
+        template_name = issue_template.display_name if issue_template else "汎用"
+        log.info("issue review started", template=template_name)
         start = time.monotonic()
 
         try:
-            system_prompt = self._prompt_builder.build_issue_system_prompt()
+            system_prompt = self._prompt_builder.build_issue_system_prompt(issue_template)
             user_prompt = self._prompt_builder.build_issue_user_prompt(
-                issue, related_mr_titles=related_mr_titles
+                issue, template=issue_template, related_mr_titles=related_mr_titles
             )
+
+            temperature = issue_template.parameters.temperature if issue_template else 0.2
+            max_tokens = issue_template.parameters.max_output_tokens if issue_template else 4096
 
             llm_response = await self._call_llm_with_retry(
                 system_prompt,
                 user_prompt,
-                temperature=0.2,
-                max_output_tokens=4096,
+                temperature=temperature,
+                max_output_tokens=max_tokens,
             )
 
             result = ReviewResult(
@@ -160,7 +169,7 @@ class Reviewer:
                 tokens_used=(llm_response.input_tokens or 0) + (llm_response.output_tokens or 0),
             )
 
-            comment_body = f"{HEADER} (`Issue レビュー`)\n\n{llm_response.text}"
+            comment_body = f"{HEADER} (`{template_name}`)\n\n{llm_response.text}"
             self._gitlab.post_issue_comment_chunked(
                 issue.project_id,
                 issue.issue_iid,

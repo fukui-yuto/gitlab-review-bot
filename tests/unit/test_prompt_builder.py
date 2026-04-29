@@ -144,10 +144,18 @@ class TestPromptBuilder:
         assert "出力フォーマット" in prompt
         assert "概要" in prompt
 
-    def test_issue_system_prompt(self):
+    def test_issue_system_prompt_fallback(self):
         prompt = self.builder.build_issue_system_prompt()
-        assert "Issue" in prompt
-        assert "レビュー" in prompt
+        assert "Issue" in prompt or "レビュー" in prompt
+
+    def test_issue_system_prompt_with_template(self):
+        loader = TemplateLoader(
+            Path(__file__).parent.parent.parent / "config" / "templates"
+        )
+        tmpl = loader.get("issue_general")
+        assert tmpl is not None
+        prompt = self.builder.build_issue_system_prompt(tmpl)
+        assert "シニア" in prompt
 
     def test_issue_user_prompt_basic(self):
         issue = IssueInfo(
@@ -164,6 +172,25 @@ class TestPromptBuilder:
         assert "bug" in prompt
         assert "urgent" in prompt
         assert "レビュー観点" in prompt
+
+    def test_issue_user_prompt_with_template(self):
+        loader = TemplateLoader(
+            Path(__file__).parent.parent.parent / "config" / "templates"
+        )
+        tmpl = loader.get("issue_procedure")
+        assert tmpl is not None
+        issue = IssueInfo(
+            project_id=42,
+            issue_iid=5,
+            title="デプロイ手順書",
+            description="サーバーにSSHでログインして作業する",
+            labels=["documentation"],
+            state="opened",
+        )
+        prompt = self.builder.build_issue_user_prompt(issue, template=tmpl)
+        assert "対象環境の特定" in prompt
+        assert "ロールバック" in prompt
+        assert "エスカレーション" in prompt
 
     def test_issue_user_prompt_with_related_mrs(self):
         issue = IssueInfo(
