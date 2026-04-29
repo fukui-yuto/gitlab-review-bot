@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from review_bot.domain.models import FileDiff
+from review_bot.domain.models import FileDiff, IssueInfo
 from review_bot.services.prompt_builder import PromptBuilder
 from review_bot.services.template_loader import TemplateLoader
 
@@ -143,3 +143,42 @@ class TestPromptBuilder:
         )
         assert "出力フォーマット" in prompt
         assert "概要" in prompt
+
+    def test_issue_system_prompt(self):
+        prompt = self.builder.build_issue_system_prompt()
+        assert "Issue" in prompt
+        assert "レビュー" in prompt
+
+    def test_issue_user_prompt_basic(self):
+        issue = IssueInfo(
+            project_id=42,
+            issue_iid=5,
+            title="ログイン画面のバグ",
+            description="パスワード入力時にエラーが発生する",
+            labels=["bug", "urgent"],
+            state="opened",
+        )
+        prompt = self.builder.build_issue_user_prompt(issue)
+        assert "ログイン画面のバグ" in prompt
+        assert "パスワード入力時" in prompt
+        assert "bug" in prompt
+        assert "urgent" in prompt
+        assert "レビュー観点" in prompt
+
+    def test_issue_user_prompt_with_related_mrs(self):
+        issue = IssueInfo(
+            project_id=42, issue_iid=5, title="Bug", description="", labels=[], state="opened"
+        )
+        prompt = self.builder.build_issue_user_prompt(
+            issue, related_mr_titles=["!10: Fix login", "!11: Add tests"]
+        )
+        assert "関連MR" in prompt
+        assert "!10: Fix login" in prompt
+        assert "!11: Add tests" in prompt
+
+    def test_issue_user_prompt_empty_labels(self):
+        issue = IssueInfo(
+            project_id=42, issue_iid=5, title="Bug", description="", labels=[], state="opened"
+        )
+        prompt = self.builder.build_issue_user_prompt(issue)
+        assert "(なし)" in prompt

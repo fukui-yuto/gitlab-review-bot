@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from review_bot.domain.models import FileDiff
+from review_bot.domain.models import FileDiff, IssueInfo
 from review_bot.services.template_loader import ReviewTemplate
 
 
@@ -56,6 +56,57 @@ class PromptBuilder:
         # Output format
         parts.append("## 出力フォーマット")
         parts.append(template.output_format.strip())
+
+        return "\n".join(parts)
+
+    def build_issue_system_prompt(self) -> str:
+        return (
+            "あなたはシニアソフトウェアエンジニアであり、プロジェクトマネージャーです。\n"
+            "以下のIssueの内容をレビューしてください。\n"
+            "Issue の品質（明確さ、再現手順、受け入れ基準など）について日本語で評価してください。"
+        )
+
+    def build_issue_user_prompt(
+        self,
+        issue: IssueInfo,
+        *,
+        related_mr_titles: list[str] | None = None,
+    ) -> str:
+        parts: list[str] = []
+
+        parts.append("## Issue情報")
+        parts.append(f"- **タイトル**: {issue.title}")
+        parts.append(f"- **説明**:\n{issue.description or '(なし)'}")
+        parts.append(f"- **ラベル**: {', '.join(issue.labels) if issue.labels else '(なし)'}")
+        parts.append(f"- **状態**: {issue.state}")
+        parts.append("")
+
+        if related_mr_titles:
+            parts.append("## 関連MR")
+            for title in related_mr_titles:
+                parts.append(f"- {title}")
+            parts.append("")
+
+        parts.append("## レビュー観点")
+        parts.append("- Issueのタイトルは内容を適切に要約しているか")
+        parts.append("- 説明は十分に具体的で再現可能か（バグの場合）")
+        parts.append("- 受け入れ基準/完了条件が明確か")
+        parts.append("- 適切なラベルが付与されているか")
+        parts.append("- スコープが適切か（大きすぎ/小さすぎないか）")
+        parts.append("- 関連する情報（スクリーンショット、ログなど）が含まれているか")
+        parts.append("")
+
+        parts.append("## 出力フォーマット")
+        parts.append("## Issue レビュー概要")
+        parts.append("（全体的な品質評価）")
+        parts.append("")
+        parts.append("## 改善提案")
+        parts.append("### [優先度] 項目")
+        parts.append("- **現状**: ...")
+        parts.append("- **提案**: ...")
+        parts.append("")
+        parts.append("## 良い点")
+        parts.append("- ...")
 
         return "\n".join(parts)
 

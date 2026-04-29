@@ -20,7 +20,6 @@ services:
         sidekiq['concurrency'] = 5
         postgresql['shared_buffers'] = '128MB'
         prometheus_monitoring['enable'] = false
-        grafana['enable'] = false
       GITLAB_ROOT_PASSWORD: "reviewbot-test-2024"
     ports:
       - "8929:8929"

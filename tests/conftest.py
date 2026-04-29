@@ -45,7 +45,9 @@ def mock_gitlab_client():
     client.post_mr_comment_chunked = MagicMock()
     # Issue support
     client.get_issue_related_mrs = MagicMock(return_value=[])
+    client.get_issue_info = MagicMock(return_value=MagicMock())
     client.post_issue_comment = MagicMock()
+    client.post_issue_comment_chunked = MagicMock()
     return client
 
 

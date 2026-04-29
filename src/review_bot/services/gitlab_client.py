@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 import gitlab
 
 from review_bot.core.logging import get_logger
-from review_bot.domain.models import FileDiff
+from review_bot.domain.models import FileDiff, IssueInfo
 
 if TYPE_CHECKING:
     from review_bot.core.config import Settings
@@ -75,6 +75,18 @@ class GitLabClient:
         for i, chunk in enumerate(chunks, 1):
             header = f"### Part {i}/{total}\n\n" if total > 1 else ""
             self.post_mr_comment(project_id, mr_iid, header + chunk)
+
+    def get_issue_info(self, project_id: int, issue_iid: int) -> IssueInfo:
+        project = self._gl.projects.get(project_id)
+        issue = project.issues.get(issue_iid)
+        return IssueInfo(
+            project_id=project_id,
+            issue_iid=issue_iid,
+            title=issue.title,
+            description=issue.description or "",
+            labels=list(issue.labels),
+            state=issue.state,
+        )
 
     def get_issue_related_mrs(self, project_id: int, issue_iid: int) -> list[dict[str, int]]:
         project = self._gl.projects.get(project_id)

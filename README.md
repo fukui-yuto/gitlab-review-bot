@@ -19,6 +19,8 @@ docker compose up -d
 
 ## コマンド
 
+MR のコメント欄または Issue のコメント欄で使用できます。
+
 ```
 /review              # 総合レビュー
 /review code_quality # コード品質レビュー
@@ -27,11 +29,16 @@ docker compose up -d
 /review help         # 使い方表示
 ```
 
+- **MR コメント**: そのMRのコード差分をレビュー
+- **Issue コメント**: Issue自体の品質レビュー + 関連するオープンなMRのコードレビュー
+
 ## ドキュメント
 
 - [セットアップガイド](docs/SETUP.md)
-- [テストガイド](docs/TESTING.md)
+- [アーキテクチャ設計書](docs/ARCHITECTURE.md)
 - [仕様書](docs/SPEC.md)
+- [テストガイド](docs/TESTING.md)
+- [ロードマップ](docs/ROADMAP.md)
 
 ## 開発
 

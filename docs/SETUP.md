@@ -46,7 +46,8 @@ docker compose up -d
 
 ### 6. 動作確認
 
-MR のコメントで `/review help` を投稿 → テンプレート一覧が返答されれば成功。
+- MR のコメントで `/review help` を投稿 → テンプレート一覧が返答されれば成功。
+- Issue のコメントで `/review` を投稿 → 関連MRのレビューが実行されれば成功。
 
 ## 開発環境
 
@@ -89,6 +90,7 @@ sudo systemctl start gitlab-review-bot
 
 - **Comments** のみ ON (他はOFF推奨)
 - MR コメントと Issue コメントの両方に対応
+- Issue コメントで `/review` を実行すると、Issue に関連付けられたオープンなMR全てが自動レビューされます
 
 ## テンプレート追加
 

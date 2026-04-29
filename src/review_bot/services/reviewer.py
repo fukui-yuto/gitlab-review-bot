@@ -5,7 +5,7 @@ import time
 from typing import TYPE_CHECKING
 
 from review_bot.core.logging import get_logger
-from review_bot.domain.models import JobStatus, ReviewJob, ReviewResult
+from review_bot.domain.models import IssueInfo, JobStatus, ReviewJob, ReviewResult
 from review_bot.services.prompt_builder import PromptBuilder
 
 if TYPE_CHECKING:
@@ -126,6 +126,65 @@ class Reviewer:
                 self._gitlab.post_mr_comment(job.project_id, job.mr_iid, error_msg)
             except Exception:
                 log.error("failed to post error comment")
+            return None
+
+    async def execute_issue_review(
+        self, issue: IssueInfo, correlation_id: str, related_mr_titles: list[str] | None = None
+    ) -> ReviewResult | None:
+        log = logger.bind(
+            correlation_id=correlation_id,
+            project=issue.project_id,
+            issue=issue.issue_iid,
+        )
+        log.info("issue review started")
+        start = time.monotonic()
+
+        try:
+            system_prompt = self._prompt_builder.build_issue_system_prompt()
+            user_prompt = self._prompt_builder.build_issue_user_prompt(
+                issue, related_mr_titles=related_mr_titles
+            )
+
+            llm_response = await self._call_llm_with_retry(
+                system_prompt,
+                user_prompt,
+                temperature=0.2,
+                max_output_tokens=4096,
+            )
+
+            result = ReviewResult(
+                template="issue_review",
+                summary="",
+                sections=[],
+                raw_markdown=llm_response.text,
+                tokens_used=(llm_response.input_tokens or 0) + (llm_response.output_tokens or 0),
+            )
+
+            comment_body = f"{HEADER} (`Issue レビュー`)\n\n{llm_response.text}"
+            self._gitlab.post_issue_comment_chunked(
+                issue.project_id,
+                issue.issue_iid,
+                comment_body,
+                self._settings.review.comment_chunk_chars,
+            )
+
+            duration_ms = int((time.monotonic() - start) * 1000)
+            log.info("issue review completed", tokens=result.tokens_used, duration_ms=duration_ms)
+            return result
+
+        except Exception as e:
+            duration_ms = int((time.monotonic() - start) * 1000)
+            log.error("issue review failed", error=str(e), duration_ms=duration_ms)
+            error_msg = (
+                f"{HEADER}: Issue レビュー実行に失敗しました。\n"
+                f"> - reason: {e}\n"
+                f"> - correlation_id: `{correlation_id}`\n"
+                f"> 管理者に correlation_id を伝えて確認を依頼してください。"
+            )
+            try:
+                self._gitlab.post_issue_comment(issue.project_id, issue.issue_iid, error_msg)
+            except Exception:
+                log.error("failed to post issue error comment")
             return None
 
     async def _call_llm_with_retry(

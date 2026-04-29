@@ -6,9 +6,9 @@ GitLab Review Bot のテストは以下の3層で構成されます:
 
 | 種別 | 範囲 | 自動/手動 |
 |---|---|---|
-| Unit | コマンドパーサ、テンプレローダ、プロンプトビルダ、署名検証、設定 | 全自動 |
-| Integration | Webhook受信 → Queue投入 → ダミーLLM → ノート投稿 | 全自動 |
-| E2E | ステージング GitLab で実MRに `/review` | スクリプト自動化 |
+| Unit | コマンドパーサ、テンプレローダ、プロンプトビルダ、署名検証、設定、レビューア、キュー | 全自動 |
+| Integration | Webhook受信(MR/Issue) → Queue投入 → ダミーLLM → ノート投稿 | 全自動 |
+| E2E | ステージング GitLab で実MR/Issueに `/review` | スクリプト自動化 |
 
 ## テスト実行方法
 
@@ -101,9 +101,11 @@ tests/
 │   ├── test_config.py               # 設定ロード
 │   ├── test_security.py             # Webhook 署名検証
 │   ├── test_template_loader.py      # テンプレート読込・検証
-│   └── test_prompt_builder.py       # プロンプト生成
+│   ├── test_prompt_builder.py       # プロンプト生成
+│   ├── test_reviewer.py            # レビューア (help/error/成功/失敗/各テンプレ)
+│   └── test_queue.py               # キュー (MR/Issue/重複抑止)
 └── integration/
-    ├── test_webhook_flow.py         # Webhook → レビュー実行フロー
+    ├── test_webhook_flow.py         # Webhook → レビュー実行フロー (MR + Issue)
     └── fixtures/
         ├── webhook_note_mr.json     # MR コメント Webhook ペイロード
         └── webhook_note_issue.json  # Issue コメント Webhook ペイロード

@@ -37,6 +37,16 @@ class FileDiff:
 
 
 @dataclass
+class IssueInfo:
+    project_id: int
+    issue_iid: int
+    title: str
+    description: str
+    labels: list[str]
+    state: str
+
+
+@dataclass
 class ReviewResult:
     template: str
     summary: str

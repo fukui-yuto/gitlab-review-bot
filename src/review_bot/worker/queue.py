@@ -48,36 +48,50 @@ async def _handle_issue_review(
 
     issue = payload.get("issue", {})
     issue_iid = issue.get("iid", 0)
+    correlation_id = generate_correlation_id()
 
-    # Find related open MRs for this issue
+    # 1. Issue自体のレビュー
+    try:
+        issue_info = reviewer._gitlab.get_issue_info(project_id, issue_iid)
+    except Exception as e:
+        logger.warning("failed to get issue info", error=str(e))
+        issue_info = None
+
+    # 関連MRを取得
     try:
         related_mrs = reviewer._gitlab.get_issue_related_mrs(project_id, issue_iid)
     except Exception as e:
         logger.warning("failed to get issue related MRs", error=str(e))
-        # Fallback: try to find MRs referencing this issue
         related_mrs = []
 
-    if not related_mrs:
-        reviewer._gitlab.post_issue_comment(
-            project_id,
-            issue_iid,
-            f"{HEADER}: この Issue に関連するオープンな MR が見つかりませんでした。\n"
-            f"MR のコメント欄で `/review` を実行するか、Issue に MR を関連付けてください。",
-        )
-        return None
+    # Issue自体をLLMでレビュー
+    if issue_info is not None:
+        related_mr_titles = []
+        for mr_ref in related_mrs:
+            try:
+                mr_info = reviewer._gitlab.get_mr_info(project_id, mr_ref["iid"])
+                related_mr_titles.append(f"!{mr_ref['iid']}: {mr_info['title']}")
+            except Exception:
+                related_mr_titles.append(f"!{mr_ref['iid']}")
 
-    # Review each related MR
-    last_job = None
-    for mr_ref in related_mrs:
-        mr_iid = mr_ref["iid"]
-        reviewer._gitlab.post_issue_comment(
-            project_id,
-            issue_iid,
-            f"{HEADER}: MR !{mr_iid} のレビューを開始します。",
+        await reviewer.execute_issue_review(
+            issue_info, correlation_id, related_mr_titles=related_mr_titles or None
         )
-        job = await _run_mr_review(project_id, mr_iid, user, command, reviewer)
-        if job:
-            last_job = job
+
+    # 2. 関連MRがあればそれぞれレビュー
+    last_job = None
+    if related_mrs:
+        for mr_ref in related_mrs:
+            mr_iid = mr_ref["iid"]
+            reviewer._gitlab.post_issue_comment(
+                project_id,
+                issue_iid,
+                f"{HEADER}: 関連 MR !{mr_iid} のコードレビューを開始します。",
+            )
+            job = await _run_mr_review(project_id, mr_iid, user, command, reviewer)
+            if job:
+                last_job = job
+
     return last_job
 
 

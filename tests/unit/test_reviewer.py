@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from review_bot.domain.models import FileDiff, JobStatus, ReviewCommand, ReviewJob
+from review_bot.domain.models import FileDiff, IssueInfo, JobStatus, ReviewCommand, ReviewJob
 from review_bot.services.llm.base import LLMResponse
 from review_bot.services.reviewer import Reviewer
 from review_bot.services.template_loader import TemplateLoader
@@ -99,3 +99,47 @@ class TestReviewer:
             result = await reviewer.execute(job)
             assert result is not None
             assert result.template == template_name
+
+    @pytest.mark.asyncio
+    async def test_issue_review_success(self, reviewer, mock_gitlab_client):
+        issue = IssueInfo(
+            project_id=42,
+            issue_iid=5,
+            title="ログイン画面でエラーが発生する",
+            description="ログイン画面でパスワードを入力するとエラーになる",
+            labels=["bug", "urgent"],
+            state="opened",
+        )
+        result = await reviewer.execute_issue_review(issue, "test-corr-id")
+        assert result is not None
+        assert result.template == "issue_review"
+        mock_gitlab_client.post_issue_comment_chunked.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_issue_review_with_related_mr_titles(self, reviewer, mock_gitlab_client):
+        issue = IssueInfo(
+            project_id=42,
+            issue_iid=5,
+            title="Feature request",
+            description="Please add dark mode",
+            labels=["enhancement"],
+            state="opened",
+        )
+        result = await reviewer.execute_issue_review(
+            issue, "test-corr-id", related_mr_titles=["!10: Add dark mode CSS"]
+        )
+        assert result is not None
+
+    @pytest.mark.asyncio
+    async def test_issue_review_llm_failure(self, mock_settings, mock_gitlab_client, template_loader):
+        failing_llm = AsyncMock()
+        failing_llm.generate = AsyncMock(side_effect=RuntimeError("LLM exploded"))
+        reviewer = Reviewer(mock_settings, mock_gitlab_client, failing_llm, template_loader)
+
+        issue = IssueInfo(
+            project_id=42, issue_iid=5, title="Bug", description="", labels=[], state="opened"
+        )
+        result = await reviewer.execute_issue_review(issue, "test-corr-id")
+        assert result is None
+        calls = mock_gitlab_client.post_issue_comment.call_args_list
+        assert any("失敗しました" in str(c) for c in calls)
