@@ -19,11 +19,20 @@ class GitLabClient:
         ssl_verify: bool | str = settings.gitlab.ssl_verify
         if settings.gitlab.ca_bundle:
             ssl_verify = settings.gitlab.ca_bundle
-        self._gl = gitlab.Gitlab(
-            url=settings.gitlab.url,
-            private_token=settings.gitlab.token,
-            ssl_verify=ssl_verify,
-        )
+        token = settings.gitlab.token
+        # OAuth tokens are typically longer; PATs start with "glpat-"
+        if token.startswith("glpat-"):
+            self._gl = gitlab.Gitlab(
+                url=settings.gitlab.url,
+                private_token=token,
+                ssl_verify=ssl_verify,
+            )
+        else:
+            self._gl = gitlab.Gitlab(
+                url=settings.gitlab.url,
+                oauth_token=token,
+                ssl_verify=ssl_verify,
+            )
 
     def verify_connection(self) -> None:
         self._gl.auth()

@@ -1,0 +1,21 @@
+app:
+  host: 0.0.0.0
+  port: 8080
+  log_level: DEBUG
+
+gitlab:
+  url: http://localhost:8929
+  webhook_secret_env: GITLAB_WEBHOOK_SECRET
+  ssl_verify: false
+
+llm:
+  provider: mock
+  timeout_sec: 10
+  max_retries: 1
+
+review:
+  default_template: general
+  templates_dir: config/templates
+  max_diff_lines: 5000
+  max_files: 50
+  comment_chunk_chars: 3800

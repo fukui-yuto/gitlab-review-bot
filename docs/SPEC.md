@@ -32,7 +32,7 @@
 | F-04 | Diff 取得 | 対象MRの差分を GitLab API から取得 |
 | F-05 | LLM レビュー実行 | テンプレートに基づきプロンプト生成 → LLM 呼び出し |
 | F-06 | 結果投稿 | MRコメントとしてレビュー結果を投稿（Markdown） |
-| F-07 | プロバイダ切替 | `gemini` / `openai` を設定/環境変数で選択 |
+| F-07 | プロバイダ切替 | `gemini` / `openai` / `mock`(テスト用) を設定/環境変数 `LLM_PROVIDER` で選択 |
 | F-08 | Issue連携 | Issue コメントの `/review` で関連MRを自動レビュー |
 | F-09 | リトライ | LLM/GitLab API 呼び出し失敗時の指数バックオフ |
 | F-10 | 重複抑止 | 同一MRで実行中のジョブがあれば抑止 |
@@ -142,7 +142,7 @@ gitlab:
   ca_bundle: /etc/ssl/certs/company-ca.pem
 
 llm:
-  provider: gemini            # gemini | openai
+  provider: gemini            # gemini | openai | mock (テスト用)
   timeout_sec: 60
   max_retries: 3
 

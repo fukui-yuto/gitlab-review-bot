@@ -5,7 +5,7 @@
 - Python 3.11+
 - Docker / Docker Compose v2
 - Self-Managed GitLab (15.0+)
-- LLM API キー (Gemini or OpenAI)
+- LLM API キー (Gemini or OpenAI、テスト時は `mock` プロバイダで不要)
 
 ## クイックスタート
 
@@ -20,7 +20,11 @@ cd gitlab-review-bot
 
 ```bash
 cp .env.example .env
-# .env を編集して各値を設定
+# .env を編集して各値を設定:
+#   GITLAB_TOKEN     - GitLab PAT (glpat-...) または OAuth トークン
+#   LLM_PROVIDER     - gemini / openai / mock (テスト用)
+#   GEMINI_API_KEY   - Gemini 使用時
+#   OPENAI_API_KEY   - OpenAI 使用時
 ```
 
 ### 3. 設定ファイル
@@ -47,7 +51,31 @@ docker compose up -d
 ### 6. 動作確認
 
 - MR のコメントで `/review help` を投稿 → テンプレート一覧が返答されれば成功。
-- Issue のコメントで `/review` を投稿 → 関連MRのレビューが実行されれば成功。
+- Issue のコメントで `/review` を投稿 → Issueレビュー + 関連MRのコードレビューが実行されれば成功。
+
+### テスト環境の全自動セットアップ
+
+テスト用GitLab CE を使って全自動でセットアップ・検証できます:
+
+```bash
+# 1. GitLab CE 起動
+docker compose -f docker-compose.test-gitlab.yml up -d gitlab
+
+# 2. 全自動セットアップ (トークン取得/プロジェクト作成/Webhook登録)
+python scripts/setup_and_run.py
+
+# 3. review-bot 起動 (Mock LLMプロバイダ、APIキー不要)
+python scripts/start_bot.py
+
+# 4. ブラウザで http://localhost:8929 にアクセス
+#    root / reviewbot-test-2024 でログイン
+#    MR や Issue で /review とコメントして動作確認
+```
+
+一括テスト:
+```bash
+bash scripts/run_docker_test.sh  # 全自動 (起動→セットアップ→テスト→E2E)
+```
 
 ## 開発環境
 
@@ -82,9 +110,13 @@ sudo systemctl start gitlab-review-bot
 
 ### 必要なトークン権限
 
-- **スコープ**: `api`
+- **スコープ**: `api` (最低限)
 - **ロール**: `Developer` 以上
 - 推奨: Bot ユーザーに付与した Project/Group Access Token
+- **対応トークン形式**:
+  - Personal Access Token (PAT): `glpat-` で始まるトークン
+  - OAuth Access Token: `/oauth/token` エンドポイントで取得したトークン
+  - ボットは自動的にトークン形式を判別します
 
 ### Webhook Trigger
 

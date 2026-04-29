@@ -52,6 +52,7 @@
 ```text
 gitlab-review-bot/
 ├── README.md
+├── .gitattributes
 ├── pyproject.toml
 ├── Dockerfile
 ├── docker-compose.yml              # 本番用
@@ -93,14 +94,22 @@ gitlab-review-bot/
 │       │       ├── base.py        # LLMProvider 抽象基底
 │       │       ├── gemini.py
 │       │       ├── openai_provider.py
-│       │       └── factory.py     # プロバイダ選択
+│       │       ├── mock_provider.py # テスト用モックプロバイダ
+│       │       └── factory.py     # プロバイダ選択 (LLM_PROVIDER環境変数対応)
 │       └── worker/
 │           ├── __init__.py
 │           └── queue.py           # asyncio ベースのワーカ + 重複抑止
+├── config/
+│   └── settings.test.yaml         # テスト用設定 (mock LLMプロバイダ)
 ├── scripts/
-│   ├── run_tests.sh               # 全自動テスト
-│   ├── run_e2e_test.sh            # E2Eテスト
-│   └── setup_test_gitlab.py       # テストGitLabセットアップ
+│   ├── run_tests.sh               # lint + pytest
+│   ├── run_docker_test.sh         # 全自動Docker統合テスト + E2E
+│   ├── run_e2e_test.sh            # E2Eテスト (手動)
+│   ├── setup_and_run.py           # GitLab自動セットアップ (トークン/Webhook/テストデータ)
+│   ├── start_bot.py               # review-botローカル起動
+│   ├── e2e_review_test.py         # E2E自動テスト (/review投稿→応答確認)
+│   ├── docker_inline_test.py      # コンポーネント統合テスト
+│   └── setup_test_gitlab.py       # テストGitLabセットアップ (Docker内用)
 ├── docs/
 │   ├── SPEC.md                    # 仕様書
 │   ├── ARCHITECTURE.md            # アーキテクチャ設計書（本ドキュメント）
@@ -192,16 +201,16 @@ Strategy パターンで LLM プロバイダを差し替え可能にしている
                     │
          ┌──────────┼──────────┐
          │                     │
-  ┌──────┴───────┐   ┌────────┴────────┐
-  │ GeminiProvider│   │ OpenAIProvider  │
-  │ (google-genai)│   │ (openai SDK)   │
-  └──────────────┘   └────────────────┘
-         ▲                     ▲
-         │                     │
-  ┌──────┴─────────────────────┴──────┐
-  │         build_llm_provider()      │
-  │  settings.llm.provider で分岐     │
-  └───────────────────────────────────┘
+  ┌──────┴───────┐   ┌────────┴────────┐   ┌──────────────┐
+  │ GeminiProvider│   │ OpenAIProvider  │   │ MockProvider │
+  │ (google-genai)│   │ (openai SDK)   │   │ (テスト用)   │
+  └──────────────┘   └────────────────┘   └──────────────┘
+         ▲                     ▲                   ▲
+         │                     │                   │
+  ┌──────┴─────────────────────┴───────────────────┴──┐
+  │              build_llm_provider()                  │
+  │  LLM_PROVIDER 環境変数 or settings.llm.provider   │
+  └────────────────────────────────────────────────────┘
 ```
 
 ### 5.3 プロンプト構築ロジック

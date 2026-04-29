@@ -39,7 +39,9 @@
 - [x] Webhook署名検証
 - [x] Docker / Docker Compose / systemd
 - [x] テスト用GitLab環境 (docker-compose.test-gitlab.yml)
-- [x] 自動テスト (67テスト, カバレッジ93%)
+- [x] 自動テスト (76 unit + 10 E2E テスト, カバレッジ93%)
+- [x] Mock LLMプロバイダ (APIキー不要でテスト可能)
+- [x] 全自動E2Eテスト (セットアップ → bot起動 → `/review` 実行 → 応答確認)
 
 ## P3: 認可・フィルタリング (Planned)
 

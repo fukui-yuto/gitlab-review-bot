@@ -6,7 +6,7 @@ GitLab MR/Issue コメントで `/review` と書くだけで、LLM が自動コ�
 
 - MR コメントでもIssue コメントでも `/review` で自動レビュー
 - 4種のレビューテンプレート (総合 / コード品質 / セキュリティ / テスト)
-- Gemini / OpenAI 切替対応
+- Gemini / OpenAI / Mock(テスト用) プロバイダ切替対応 (`LLM_PROVIDER` 環境変数)
 - Docker + systemd で安定運用
 
 ## クイックスタート
@@ -44,7 +44,8 @@ MR のコメント欄または Issue のコメント欄で使用できます。
 
 ```bash
 pip install -e ".[dev]"
-bash scripts/run_tests.sh
+bash scripts/run_tests.sh          # lint + pytest (76テスト)
+bash scripts/run_docker_test.sh    # GitLab CE + E2E 全自動テスト
 ```
 
 ## ライセンス

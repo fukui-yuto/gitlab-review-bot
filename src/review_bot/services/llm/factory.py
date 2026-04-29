@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 
 
 def build_llm_provider(settings: Settings) -> LLMProvider:
-    match settings.llm.provider:
+    match settings.llm.effective_provider:
         case "gemini":
             from review_bot.services.llm.gemini import GeminiProvider
 
@@ -18,5 +18,9 @@ def build_llm_provider(settings: Settings) -> LLMProvider:
             from review_bot.services.llm.openai_provider import OpenAIProvider
 
             return OpenAIProvider(settings)
+        case "mock":
+            from review_bot.services.llm.mock_provider import MockProvider
+
+            return MockProvider()
         case other:
             raise ValueError(f"Unknown LLM provider: {other}")

@@ -58,6 +58,11 @@ class LLMConfig(BaseModel):
     gemini: GeminiConfig = Field(default_factory=GeminiConfig)
     openai: OpenAIConfig = Field(default_factory=OpenAIConfig)
 
+    @property
+    def effective_provider(self) -> str:
+        """LLM_PROVIDER env var overrides YAML config."""
+        return os.environ.get("LLM_PROVIDER", self.provider)
+
 
 class ReviewConfig(BaseModel):
     default_template: str = "general"
